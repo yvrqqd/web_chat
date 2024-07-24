@@ -84,13 +84,13 @@ class Client:
     async def help(self) -> None:
         help_text = """
         Available commands:
-        - connect:          connect to a server
-        - disconnect:       disconnect from the server
-        - send <message>:   send a message to the server
-        - set_name <name>:  set the client's name
-        - get_name:         get the client's name
-        - help:             get 'help' text
-        - quit:             quit the application
+        - connect           : connect to a server
+        - disconnect        : disconnect from the server
+        - send <message>    : send a message to the server
+        - set_name <name>   : set the client's name
+        - get_name          : get the client's name
+        - help              : get 'help' text
+        - quit              : quit the application
         """
         print(help_text)
     
