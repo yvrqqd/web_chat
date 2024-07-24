@@ -1,5 +1,6 @@
 import asyncio
 import json
+from json import JSONDecodeError
 import logging
 import logging.config
 
@@ -25,33 +26,27 @@ class Client:
     async def connect(self) -> None:
         if self.writer and not self.writer.is_closing():
             logging.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
-            print('Already connected.')
             return
         try:
             self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
-        except ConnectionRefusedError:
-            logging.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
-            print(f'Connection to {self.host}:{self.port} was refused. Please check if the server is running.')
+        except ConnectionRefusedError as e:
+            logging.warning(f'Connection to {self.host}:{self.port} was refused. Please check if the server is running. {e}')
         except Exception as e:
-            logging.info(f'Connection attempt to {self.host}:{self.port} caused {e}.')
-            print(f'Connection attempt to {self.host}:{self.port} caused {e}.')
+            logging.error(f'Connection attempt to {self.host}:{self.port} caused {e}.')
         else:
             logging.info(f'Connected to server at {self.host}:{self.port}')
-            print(f'Connected to server at {self.host}:{self.port}')
             self.listener_task = asyncio.create_task(self.message_listener())
             await self._on_join_message()
     
     async def disconnect(self) -> None:
         if self.writer is None or self.writer.is_closing():
-            logging.info('Try to disconnect. But self.writer is None or self.writer.is_closing()')
-            print('Not connected.')
+            logging.info('Tried to disconnect. But self.writer is None or self.writer.is_closing()')
             return
 
         await self._on_leave_message()
         self.writer.close()
         await self.writer.wait_closed()
         logging.info('Disconnected.')
-        print('Disconnected.')
 
     async def _on_join_message(self) -> None:
         join_message = {
@@ -77,16 +72,14 @@ class Client:
     
     async def send_json_message(self, message: dict) -> None:
         if self.writer is None or self.writer.is_closing():
-            logging.warning('Try to send message while self.writer is None or self.writer.is_closing().')
-            print('Not connected. Use the "connect" command to connect to the server.')
+            logging.warning('Tried to send message while self.writer is None or self.writer.is_closing().')
             return
         try:
             message_str = json.dumps(message)
             self.writer.write(message_str.encode())
             await self.writer.drain()
         except ConnectionError:
-            logging.warning(f'Connection error occurred in send_json_message message: {message}')
-            print('Connection error occurred.')
+            logging.warning(f'Connection error occurred in send_json_message. message: {message}')
 
     async def help(self) -> None:
         help_text = """
@@ -106,7 +99,7 @@ class Client:
             while True:
                 data = await self.reader.read(1024)
                 if not data:
-                    print('Connection closed')
+                    logging.warning('From message_listener: connection might be closed.')
                     break
                 try:
                     message = json.loads(data)
@@ -116,26 +109,23 @@ class Client:
                         case 'message':
                             text = message.get('text', '')
                             print(f'[{user}] > {text}')
-                        
                         case 'join':
-                            print(f"User {user} has joined.")
+                            print(f'User {user} has joined.')
                         case 'leave':
-                            print(f"User {user} has left.")
+                            print(f'User {user} has left.')
                         case _:
-                            print(f"Unknown event or message too big. [RAW] > {message}")
-                except json.JSONDecodeError as e:
-                    
-                    print(f'JSON decode error: {e}. [RAW] > {data}')
+                            logging.warning(f'Unknown event or message too big. [RAW] > {message}')
+                except JSONDecodeError as e:
+                    logging.warning(f'json.JSONDecodeError in message_listener {e}')
 
         except asyncio.CancelledError:
-            print('Listener task cancelled.')
+            logging.warning('Listener task cancelled.')
         except Exception as e:
-            print(f'Error while receiving data: {e}')
+            logging.warning(f'Error while receiving data: {e}')
 
     async def command_listener(self) -> None:
         while True:
             command = await ainput()
-            logging.info(f'New command - {command}')
             match command.strip().lower():
                 case 'quit':
                     await self.disconnect()
@@ -160,7 +150,7 @@ class Client:
         await self.close()
 
     async def close(self) -> None:
-        print('Closing the connection')
+        logging.info('Closing the connection')
         if self.writer is None:
             return
         await self._on_leave_message()
@@ -170,7 +160,7 @@ class Client:
     def _ask_name(self) -> None:
         name = input('Please, print your nickname > ')
         if not name:
-            print('Name cannot be empty.')
+            logging.warning('Name cannot be empty.')
             self._ask_name()
             return
         self.name = name
@@ -178,10 +168,10 @@ class Client:
 
     def _set_name(self, name: str) -> None:
         if self.writer and not self.writer.is_closing():
-            print('You cannot change name while connected to server. Disconnect first')
+            logging.warning('You cannot change name while connected to server. Disconnect first.')
             return
         if not name:
-            print('Name cannot be empty.')
+            logging.warning('Name cannot be empty.')
             return
         self.name = name
         print(f'Name set to: {self.name}')
