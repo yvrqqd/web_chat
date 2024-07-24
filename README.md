@@ -7,7 +7,7 @@
 Проверено на Win11 Python3.12
 
 ## Запуск
-python web_chat/clent.py
+python web_chat/clent.py \n
 python web_chat/server.py
 
 ## Комментарии
