@@ -25,28 +25,28 @@ class Client:
 
     async def connect(self) -> None:
         if self.writer and not self.writer.is_closing():
-            logging.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
+            logger.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
             return
         try:
             self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
         except ConnectionRefusedError as e:
-            logging.warning(f'Connection to {self.host}:{self.port} was refused. Please check if the server is running. {e}')
+            logger.warning(f'Connection to {self.host}:{self.port} was refused. Please check if the server is running. {e}')
         except Exception as e:
-            logging.error(f'Connection attempt to {self.host}:{self.port} caused {e}.')
+            logger.error(f'Connection attempt to {self.host}:{self.port} caused {e}.')
         else:
-            logging.info(f'Connected to server at {self.host}:{self.port}')
+            logger.info(f'Connected to server at {self.host}:{self.port}')
             self.listener_task = asyncio.create_task(self.message_listener())
             await self._on_join_message()
     
     async def disconnect(self) -> None:
         if self.writer is None or self.writer.is_closing():
-            logging.info('Tried to disconnect. But self.writer is None or self.writer.is_closing()')
+            logger.info('Tried to disconnect. But self.writer is None or self.writer.is_closing()')
             return
 
         await self._on_leave_message()
         self.writer.close()
         await self.writer.wait_closed()
-        logging.info('Disconnected.')
+        logger.info('Disconnected.')
 
     async def _on_join_message(self) -> None:
         join_message = {
@@ -72,14 +72,14 @@ class Client:
     
     async def send_json_message(self, message: dict) -> None:
         if self.writer is None or self.writer.is_closing():
-            logging.warning('Tried to send message while self.writer is None or self.writer.is_closing().')
+            logger.warning('Tried to send message while self.writer is None or self.writer.is_closing().')
             return
         try:
             message_str = json.dumps(message)
             self.writer.write(message_str.encode())
             await self.writer.drain()
         except ConnectionError:
-            logging.warning(f'Connection error occurred in send_json_message. message: {message}')
+            logger.warning(f'Connection error occurred in send_json_message. message: {message}')
 
     async def help(self) -> None:
         help_text = """
@@ -99,7 +99,7 @@ class Client:
             while True:
                 data = await self.reader.read(1024)
                 if not data:
-                    logging.warning('From message_listener: connection might be closed.')
+                    logger.warning('From message_listener: connection might be closed.')
                     break
                 try:
                     message = json.loads(data)
@@ -114,14 +114,14 @@ class Client:
                         case 'leave':
                             print(f'User {user} has left.')
                         case _:
-                            logging.warning(f'Unknown event or message too big. [RAW] > {message}')
+                            logger.warning(f'Unknown event or message too big. [RAW] > {message}')
                 except JSONDecodeError as e:
-                    logging.warning(f'json.JSONDecodeError in message_listener {e}')
+                    logger.warning(f'json.JSONDecodeError in message_listener {e}')
 
         except asyncio.CancelledError:
-            logging.warning('Listener task cancelled.')
+            logger.warning('Listener task cancelled.')
         except Exception as e:
-            logging.warning(f'Error while receiving data: {e}')
+            logger.warning(f'Error while receiving data: {e}')
 
     async def command_listener(self) -> None:
         while True:
@@ -150,7 +150,7 @@ class Client:
         await self.close()
 
     async def close(self) -> None:
-        logging.info('Closing the connection')
+        logger.info('Closing the connection')
         if self.writer is None:
             return
         await self._on_leave_message()
@@ -160,7 +160,7 @@ class Client:
     def _ask_name(self) -> None:
         name = input('Please, print your nickname > ')
         if not name:
-            logging.warning('Name cannot be empty.')
+            logger.warning('Name cannot be empty.')
             self._ask_name()
             return
         self.name = name
@@ -168,10 +168,10 @@ class Client:
 
     def _set_name(self, name: str) -> None:
         if self.writer and not self.writer.is_closing():
-            logging.warning('You cannot change name while connected to server. Disconnect first.')
+            logger.warning('You cannot change name while connected to server. Disconnect first.')
             return
         if not name:
-            logging.warning('Name cannot be empty.')
+            logger.warning('Name cannot be empty.')
             return
         self.name = name
         print(f'Name set to: {self.name}')
@@ -196,4 +196,4 @@ if __name__ == '__main__':
     try:
         asyncio.run(client.command_listener())
     except KeyboardInterrupt:
-        logging.info('KeyboardInterrupt')
+        logger.info('KeyboardInterrupt')

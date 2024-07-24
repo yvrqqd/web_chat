@@ -1,8 +1,6 @@
-from ast import Tuple
+
 import asyncio
 import json
-import signal
-import socket
 import logging
 import logging.config
 from typing import Tuple
@@ -24,24 +22,23 @@ class Server:
         try:
             self.server = await asyncio.start_server(self.__connection_handler, self.host, self.port)
         except OSError as e:
-            logging.error(f'Error while attempting to bind on address {self.host}:{self.port}')
+            logger.error(f'Error while attempting to bind on address {self.host}:{self.port}')
             return
 
         addrs = ', '.join(str(sock.getsockname()) for sock in self.server.sockets)
-        logging.info(f'Serving on {addrs}')
+        logger.info(f'Serving on {addrs}')
 
-        self.shutdown_event = asyncio.Event()
+        # self.shutdown_event = asyncio.Event()
 
         async with self.server:
             await self.server.serve_forever()
 
-    async def stop(self, event: str='explicit call') -> None:
-        logging.info(f'Server has been shut down by {event}')
-        self.shutdown_event.set()
-
+    # async def stop(self, event: str='explicit call') -> None:
+    #     logging.info(f'Server has been shut down by {event}')
+    #     self.shutdown_event.set()
 
     async def broadcast(self, message: any, sender_addr: Tuple) -> None:
-        logging.info(f'Broadcasted message from {sender_addr}')
+        logger.info(f'Broadcasted message from {sender_addr}')
         for addr, client in self.clients.items():
             if client.get('status') != 'connected' or addr == sender_addr:
                 continue
@@ -52,13 +49,13 @@ class Server:
                 writer.write(message)
                 await writer.drain()
             except ConnectionError:
-                logging.warning(f'ConnectionError {addr} - {client}')
+                logger.warning(f'ConnectionError {addr} - {client}')
                 self.clients[addr]['status'] = 'disconnected'
 
     async def __connection_handler(self, reader, writer) -> None:
         addr = writer.get_extra_info("peername")
         self.clients[addr] = {'props': (reader, writer), 'login': '','status': 'connected'}
-        logging.info(f'Connected by {addr}')
+        logger.info(f'Connected by {addr}')
 
         try:
             while True:
@@ -67,17 +64,17 @@ class Server:
                 if not data:
                     break
                 message = json.loads(data)
-                logging.info(f'Received {message} from {addr}')
+                logger.info(f'Received {message} from {addr}')
                 await self.broadcast(data, addr)
 
                 if message.get('event','') == 'leave':
-                    logging.info(f'Leave message was sent by {addr}')
+                    logger.info(f'Leave message was sent by {addr}')
                     self.clients[addr]['status'] = 'disconnected'
                     break
         except ConnectionError:
-            logging.warning(f'ConnectionError while receiving from {addr}')
+            logger.warning(f'ConnectionError while receiving from {addr}')
         finally:
-            logging.info(f'{addr} disconnected')
+            logger.info(f'{addr} disconnected')
             self.clients[addr]['status'] = 'disconnected'
             writer.close()
             await writer.wait_closed()
@@ -88,9 +85,9 @@ if __name__ == '__main__':
     from common.env import get_init_data
 
     server = Server(**get_init_data())
-    logging.info(f'Server initialised')
+    logger.info(f'Server initialised')
 
     try:
         asyncio.run(server.start())
     except KeyboardInterrupt:
-        logging.info('KeyboardInterrupt')
+        logger.info('KeyboardInterrupt')
