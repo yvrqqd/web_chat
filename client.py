@@ -23,6 +23,7 @@ class Client:
 
     async def connect(self) -> None:
         if self.writer and not self.writer.is_closing():
+            logging.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
             print('Already connected.')
             return
         try:
@@ -31,6 +32,7 @@ class Client:
             logging.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
             print(f'Connection to {self.host}:{self.port} was refused. Please check if the server is running.')
         except Exception as e:
+            logging.info(f'Connection attempt to {self.host}:{self.port} caused {e}.')
             print(f'Connection attempt to {self.host}:{self.port} caused {e}.')
         else:
             logging.info(f'Connected to server at {self.host}:{self.port}')
@@ -44,54 +46,46 @@ class Client:
             print('Not connected.')
             return
 
-        print('Disconnecting...')
         await self._on_leave_message()
         self.writer.close()
         await self.writer.wait_closed()
+        logging.info('Disconnected.')
         print('Disconnected.')
-
 
     async def _on_join_message(self) -> None:
         join_message = {
-            "event": "join",
-            "login": self.name
+            'event': 'join',
+            'login': self.name
         }
         await self.send_json_message(join_message)
 
     async def _on_leave_message(self) -> None:
         leave_message = {
-            "event": "leave",
-            "login": self.name
+            'event': 'leave',
+            'login': self.name
         }
         await self.send_json_message(leave_message)
 
     async def send_message(self, message: str='') -> None:
         message_json = {
-            "event": "message",
-            "text": message,
-            "login": self.name
+            'event': 'message',
+            'text': message,
+            'login': self.name
         }
         await self.send_json_message(message_json)
     
     async def send_json_message(self, message: dict) -> None:
         if self.writer is None or self.writer.is_closing():
+            logging.warning('Try to send message while self.writer is None or self.writer.is_closing().')
             print('Not connected. Use the "connect" command to connect to the server.')
             return
         try:
             message_str = json.dumps(message)
-            # print(f'Sending: {message_str}')
             self.writer.write(message_str.encode())
             await self.writer.drain()
         except ConnectionError:
+            logging.warning(f'Connection error occurred in send_json_message message: {message}')
             print('Connection error occurred.')
-
-    async def close(self) -> None:
-        print('Closing the connection')
-        if self.writer is None:
-            return
-        await self._on_leave_message()
-        self.writer.close()
-        await self.writer.wait_closed()
 
     async def help(self) -> None:
         help_text = """
@@ -111,7 +105,7 @@ class Client:
             while True:
                 data = await self.reader.read(1024)
                 if not data:
-                    print('Connection closed by the server.')
+                    print('Connection closed')
                     break
                 try:
                     message = json.loads(data)
@@ -129,6 +123,7 @@ class Client:
                         case _:
                             print(f"Unknown event or message too big. [RAW] > {message}")
                 except json.JSONDecodeError as e:
+                    
                     print(f'JSON decode error: {e}. [RAW] > {data}')
 
         except asyncio.CancelledError:
@@ -138,8 +133,8 @@ class Client:
 
     async def command_listener(self) -> None:
         while True:
-            await asyncio.sleep(1)
             command = await ainput()
+            logging.info(f'New command - {command}')
             match command.strip().lower():
                 case 'quit':
                     await self.disconnect()
@@ -162,7 +157,15 @@ class Client:
                 case _:
                     print("Unknown command. Type 'help' to list available ones.")
         await self.close()
-    
+
+    async def close(self) -> None:
+        print('Closing the connection')
+        if self.writer is None:
+            return
+        await self._on_leave_message()
+        self.writer.close()
+        await self.writer.wait_closed()
+
     def _ask_name(self) -> None:
         name = input('Please, print your nickname > ')
         if not name:
@@ -189,12 +192,12 @@ class Client:
     @name.setter
     def name(self, value) -> None:
         if not value:
-            raise ValueError("Name cannot be empty.")
+            raise ValueError('Name cannot be empty.')
         self._name = value
 
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     from common.env import get_init_data
 
     client = Client(**get_init_data())

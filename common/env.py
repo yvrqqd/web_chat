@@ -4,7 +4,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-
 def get_init_data() -> dict[str, Any]:
     dotenv_path = Path(__file__).resolve().parent.parent / '.env' # .env file should be specified in parent dir
     if os.path.exists(dotenv_path):

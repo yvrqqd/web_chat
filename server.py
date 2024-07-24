@@ -1,4 +1,6 @@
+from ast import Tuple
 import asyncio
+import json
 import signal
 import socket
 import logging
@@ -33,7 +35,7 @@ class Server:
         self.shutdown_event.set()
 
 
-    async def broadcast(self, message: str, sender_addr: dict) -> None:
+    async def broadcast(self, message: any, sender_addr: Tuple) -> None:
         logging.info(f'Broadcasted message from {sender_addr}')
         for addr, client in self.clients.items():
             if client.get('status') != 'connected' or addr == sender_addr:
@@ -42,7 +44,7 @@ class Server:
                 writer = client.get('props',[None, None])[-1]
                 if writer is None:
                     continue
-                writer.write(message.encode())
+                writer.write(message)
                 await writer.drain()
             except ConnectionError:
                 logging.warning(f'ConnectionError {addr} - {client}')
@@ -59,11 +61,16 @@ class Server:
                 print(f'>{data}')
                 if not data:
                     break
-                message = data.decode()
+                message = json.loads(data)
                 logging.info(f'Received {message} from {addr}')
-                await self.broadcast(message, addr)
+                await self.broadcast(data, addr)
+
+                if message.get('event','') == 'leave':
+                    logging.info(f'Leave message was sent by {addr}')
+                    self.clients[addr]['status'] = 'disconnected'
+                    break
         except ConnectionError:
-            logging.info(f'ConnectionError while receiving from {addr}')
+            logging.warning(f'ConnectionError while receiving from {addr}')
         finally:
             logging.info(f'{addr} disconnected')
             self.clients[addr]['status'] = 'disconnected'
@@ -72,11 +79,11 @@ class Server:
 
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     from common.env import get_init_data
 
     server = Server(**get_init_data())
-    logging.info(f'Serving initialised')
+    logging.info(f'Server initialised')
 
     try:
         asyncio.run(server.start())
