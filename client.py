@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import logging.config
+
 from common.async_input import ainput
 
 
@@ -11,7 +12,7 @@ logger = logging.getLogger('client')
 
 
 class Client:
-    """simple asynchronous TCP client"""
+    """Asynchronous TCP client"""
 
     def __init__(self, host: str, port: int) -> None:
         self.host = host
@@ -146,10 +147,10 @@ class Client:
                     await self.disconnect()
                 case 'help':
                     await self.help()
-                case command if command.startswith('send'):            # 'send'
+                case command if command.startswith('send'):         # 'send'
                     message = command[4:].strip()
                     await self.send_message(message)
-                case command if command.startswith('set_name'):        # 'set_name'
+                case command if command.startswith('set_name'):     # 'set_name'
                     name = ' '.join(command.split(' ')[1:])
                     self._set_name(name)
                 case 'get_name':

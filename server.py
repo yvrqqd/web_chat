@@ -5,7 +5,7 @@ import signal
 import socket
 import logging
 import logging.config
-
+from typing import Tuple
 
 logging.config.fileConfig('logging.ini', disable_existing_loggers=False)
 logger = logging.getLogger('server')
@@ -13,14 +13,19 @@ logger = logging.getLogger('server')
 
 
 class Server:
-   
+    """Asynchronous TCP server"""
+
     def __init__(self, host:str, port: int) -> None:
         self.host = host
         self.port = port
         self.clients = {}
 
-    async def start(self, ) -> None:
-        self.server = await asyncio.start_server(self.__connection_handler, self.host, self.port)
+    async def start(self) -> None:
+        try:
+            self.server = await asyncio.start_server(self.__connection_handler, self.host, self.port)
+        except OSError as e:
+            logging.error(f'Error while attempting to bind on address {self.host}:{self.port}')
+            return
 
         addrs = ', '.join(str(sock.getsockname()) for sock in self.server.sockets)
         logging.info(f'Serving on {addrs}')
