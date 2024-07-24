@@ -77,7 +77,10 @@ class Server:
             logger.info(f'{addr} disconnected')
             self.clients[addr]['status'] = 'disconnected'
             writer.close()
-            await writer.wait_closed()
+            try:
+                await writer.wait_closed()
+            except ConnectionResetError as e:
+                logger.warning(f'ConnectionError while await writer.wait_closed() {e}')
 
 
 
