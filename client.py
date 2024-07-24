@@ -202,10 +202,3 @@ if __name__ == '__main__':
         asyncio.run(client.command_listener())
     except KeyboardInterrupt:
         logger.info('KeyboardInterrupt')
-    finally:
-        try:
-            logger.info('Try to disconnect after KeyboardInterrupt')
-            asyncio.run(client.disconnect())
-        except Exception as e:
-            logger.error(f"Error during disconnect: {e}")
-
