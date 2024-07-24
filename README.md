@@ -7,8 +7,9 @@
 Проверено на Win11 Python3.12
 
 ## Запуск
-python web_chat/clent.py  
-python web_chat/server.py  
+cd web_chat  
+python client.py  
+python server.py  
 
 ## Комментарии
 1. Не знаю, опечатка ли, но в шаблонах сообщений из условий в некоторых местах для пользователя использован ключ 'login', а где-то 'user' - (использовал везде 'login').
