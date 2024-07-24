@@ -1,11 +1,12 @@
 import asyncio
 import json
-import random
 import logging
-import sys
-
-
+import logging.config
 from common.async_input import ainput
+
+
+logging.config.fileConfig('logging.ini', disable_existing_loggers=False)
+logger = logging.getLogger('client')
 
 
 
@@ -27,16 +28,19 @@ class Client:
         try:
             self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
         except ConnectionRefusedError:
+            logging.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
             print(f'Connection to {self.host}:{self.port} was refused. Please check if the server is running.')
         except Exception as e:
             print(f'Connection attempt to {self.host}:{self.port} caused {e}.')
         else:
+            logging.info(f'Connected to server at {self.host}:{self.port}')
+            print(f'Connected to server at {self.host}:{self.port}')
             self.listener_task = asyncio.create_task(self.message_listener())
             await self._on_join_message()
-            print(f'Connected to server at {self.host}:{self.port}')
     
     async def disconnect(self) -> None:
         if self.writer is None or self.writer.is_closing():
+            logging.info('Try to disconnect. But self.writer is None or self.writer.is_closing()')
             print('Not connected.')
             return
 
@@ -103,20 +107,34 @@ class Client:
         print(help_text)
     
     async def message_listener(self) -> None:
-        while True:
-            try:
+        try:
+            while True:
                 data = await self.reader.read(1024)
-                if data:
-                    print(f"Received: {data.decode()}")
-                else:
+                if not data:
                     print('Connection closed by the server.')
                     break
-            except asyncio.CancelledError:
-                print('Listener task cancelled.')
-                break
-            except Exception as e:
-                print(f'Error while receiving data: {e}')
-                break
+                try:
+                    message = json.loads(data)
+                    event = message.get('event')
+                    user = message.get('login', 'unknown')
+                    match event:
+                        case 'message':
+                            text = message.get('text', '')
+                            print(f'[{user}] > {text}')
+                        
+                        case 'join':
+                            print(f"User {user} has joined.")
+                        case 'leave':
+                            print(f"User {user} has left.")
+                        case _:
+                            print(f"Unknown event or message too big. [RAW] > {message}")
+                except json.JSONDecodeError as e:
+                    print(f'JSON decode error: {e}. [RAW] > {data}')
+
+        except asyncio.CancelledError:
+            print('Listener task cancelled.')
+        except Exception as e:
+            print(f'Error while receiving data: {e}')
 
     async def command_listener(self) -> None:
         while True:
@@ -183,5 +201,5 @@ if __name__ == "__main__":
 
     try:
         asyncio.run(client.command_listener())
-    except EOFError:
-        print('Server stopped manually.')
+    except KeyboardInterrupt:
+        logging.info('KeyboardInterrupt')
