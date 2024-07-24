@@ -15,6 +15,16 @@ python server.py
 Находятся в файле .env
 Извлекаются для дальнейшего использования функцией, объявленной в /common/env.py
 
+### Работа
+        - connect:          connect to a server
+        - disconnect:       disconnect from the server
+        - send <message>:   send a message to the server
+        - set_name <name>:  set the client's name
+        - get_name:         get the client's name
+        - help:             get 'help' text
+        - quit:             quit the application
+  
+
 ## Комментарии
 1. Не знаю, опечатка ли, но в шаблонах сообщений из условий в некоторых местах для пользователя использован ключ 'login', а где-то 'user' - (использовал везде 'login').
 2. Есть ограничение на длину сообщения: все в целом должно помещаться в считываемый блок (да, можно было в цикле его собрать, но тогда нужно однозначно определять символ окончания сообщения: /n не совсем подходит, а остальное может встречаться в тексте сообщения).
