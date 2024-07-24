@@ -15,7 +15,7 @@ python server.py
 Находятся в файле .env
 Извлекаются для дальнейшего использования функцией, объявленной в /common/env.py
 
-### Работа
+### Доступные команды
         - connect:          connect to a server
         - disconnect:       disconnect from the server
         - send <message>:   send a message to the server
