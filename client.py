@@ -16,13 +16,14 @@ class Client:
     """Asynchronous TCP client"""
 
     def __init__(self, host: str, port: int) -> None:
+        self.shutdown_event = asyncio.Event()
         self.host = host
         self.port = port
         self.reader = None
         self.writer = None
         self._name: str
         self._ask_name()
-
+        
     async def connect(self) -> None:
         if self.writer and not self.writer.is_closing():
             logger.info(f'Connection to {self.host}:{self.port} was refused. Already connected.')
@@ -96,7 +97,7 @@ class Client:
     
     async def message_listener(self) -> None:
         try:
-            while True:
+            while not self.shutdown_event.is_set():
                 data = await self.reader.read(1024)
                 if not data:
                     logger.warning('From message_listener: connection might be closed.')
@@ -124,7 +125,7 @@ class Client:
             logger.warning(f'Error while receiving data: {e}')
 
     async def command_listener(self) -> None:
-        while True:
+        while not self.shutdown_event.is_set():
             command = await ainput()
             match command.strip().lower():
                 case 'quit':
@@ -158,7 +159,11 @@ class Client:
         await self.writer.wait_closed()
 
     def _ask_name(self) -> None:
-        name = input('Please, print your nickname > ')
+        try:
+            name = input('Please, print your nickname > ')
+        except:
+            self.shutdown_event.set()
+            return
         if not name:
             logger.warning('Name cannot be empty.')
             self._ask_name()
@@ -197,3 +202,10 @@ if __name__ == '__main__':
         asyncio.run(client.command_listener())
     except KeyboardInterrupt:
         logger.info('KeyboardInterrupt')
+    finally:
+        try:
+            logger.info('Try to disconnect after KeyboardInterrupt')
+            asyncio.run(client.disconnect())
+        except Exception as e:
+            logger.error(f"Error during disconnect: {e}")
+
