@@ -16,13 +16,13 @@ python server.py
 Извлекаются для дальнейшего использования функцией, объявленной в /common/env.py
 
 ### Доступные команды
-        - connect:          connect to a server
-        - disconnect:       disconnect from the server
-        - send <message>:   send a message to the server
-        - set_name <name>:  set the client's name
-        - get_name:         get the client's name
-        - help:             get 'help' text
-        - quit:             quit the application
+        - connect           : connect to a server
+        - disconnect        : disconnect from the server
+        - send <message>    : send a message to the server
+        - set_name <name>   : set the client's name
+        - get_name          : get the client's name
+        - help              : get 'help' text
+        - quit              : quit the application
   
 
 ## Комментарии
