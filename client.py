@@ -85,7 +85,6 @@ class Client:
         except ConnectionError:
             logger.warning(f'Connection error occurred in send_json_message. message: {message}')
 
-
     async def help(self) -> None:
         help_text = """
         Available commands:
