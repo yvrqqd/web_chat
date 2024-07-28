@@ -46,7 +46,10 @@ class Client:
 
         await self._on_leave_message()
         self.writer.close()
-        await self.writer.wait_closed()
+        try:
+            await self.writer.wait_closed()
+        except ConnectionAbortedError as message:
+            logger.error(f'Server might be turned off. ConnectionAbortedError: {message}')
         logger.info('Disconnected.')
 
     async def _on_join_message(self) -> None:
@@ -81,6 +84,7 @@ class Client:
             await self.writer.drain()
         except ConnectionError:
             logger.warning(f'Connection error occurred in send_json_message. message: {message}')
+
 
     async def help(self) -> None:
         help_text = """
